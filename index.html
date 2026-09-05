@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Rank programming fonts through quick head-to-head comparisons.">
+    <title>Glyph Fight — Programming Font Ranker</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Glyph Fight home"><span class="brand-mark" aria-hidden="true">Gf</span><span>Glyph Fight</span></a>
+      <div class="progress-copy"><span id="vote-count">0</span> decisions made</div>
+      <a class="source-link" href="https://www.nerdfonts.com/font-downloads" target="_blank" rel="noreferrer">Font downloads ↗</a>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow">THE PROGRAMMING TYPEFACE TOURNAMENT</p>
+        <h1>Which code feels <em>right?</em></h1>
+        <p>Same code. Two typefaces. Trust your eyes and choose fast. <span class="shortcut-group"><span class="shortcut-hint"><kbd>P</kbd><b>Pass</b></span><span class="shortcut-hint"><kbd>U</kbd><b>Undo</b></span><span class="shortcut-hint"><kbd>−</kbd><b>Smaller</b></span><span class="shortcut-hint"><kbd>+</kbd><b>Larger</b></span></span></p>
+      </section>
+
+      <section class="arena" aria-label="Font comparison">
+        <article class="font-card left-card" id="choice-1" role="button" tabindex="-1" aria-label="Choose font one" aria-disabled="true">
+          <span class="card-meta"><span class="font-identity"><button class="font-name" id="font-name-1" data-index="0" type="button">Click to Reveal Font</button></span><span class="shortcut-hint key-hint"><kbd>1</kbd><span>or</span><kbd>←</kbd><b>Vote this</b></span></span>
+          <span class="code-window">
+            <span class="window-bar"><i></i><i></i><i></i><b>snippet.c</b></span>
+            <code class="code-sample" id="code-1">Loading snippet.c…</code>
+          </span>
+        </article>
+
+        <div class="versus" aria-hidden="true">VS</div>
+
+        <article class="font-card right-card" id="choice-2" role="button" tabindex="-1" aria-label="Choose font two" aria-disabled="true">
+          <span class="card-meta"><span class="font-identity"><button class="font-name" id="font-name-2" data-index="1" type="button">Click to Reveal Font</button></span><span class="shortcut-hint key-hint"><kbd>2</kbd><span>or</span><kbd>→</kbd><b>Vote this</b></span></span>
+          <span class="code-window">
+            <span class="window-bar"><i></i><i></i><i></i><b>snippet.c</b></span>
+            <code class="code-sample" id="code-2" aria-hidden="true"></code>
+          </span>
+        </article>
+
+        <div class="loading-panel" id="loading" role="status" aria-live="polite">
+          <span class="spinner"></span><strong>Preparing the next matchup</strong>
+          <small>New fonts are downloaded once, then kept in the local cache.</small>
+        </div>
+      </section>
+
+      <section class="leaderboard" aria-labelledby="leaderboard-title">
+        <div class="leaderboard-heading">
+          <div><p class="eyebrow">LIVE ELO RANKING</p><h2 id="leaderboard-title">The current pecking order</h2></div>
+          <p>Every choice moves both contenders. Your progress is saved automatically.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Rank</th><th>Typeface</th><th>Rating</th><th>Record</th><th>Seen</th></tr></thead>
+            <tbody id="rankings"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="alert"></div>
+  </body>
+</html>
