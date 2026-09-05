@@ -5,20 +5,32 @@ listed by [Nerd Fonts](https://www.nerdfonts.com/font-downloads). It presents th
 same code in two prioritized contenders and maintains an Elo leaderboard from
 your choices.
 
-## Run it
+## Start the server
 
 Requires Python 3.10 or newer. No packages need to be installed.
 
+From a terminal, change into the project directory and start the server:
+
 ```bash
 cd font-ranker
+npm start
+```
+
+Then open <http://127.0.0.1:8787> in a browser. Leave the terminal running while
+you use the app. Press `Ctrl-C` in that terminal to stop the server; run
+`npm start` again to restart it.
+
+You can also start it directly with Python:
+
+```bash
 python3 server.py
 ```
 
-Open <http://127.0.0.1:8787>. Choose with `1` / `2`, the left / right arrow keys,
+Choose with `1` / `2`, the left / right arrow keys,
 or by clicking a card. Press `P` to pass on a matchup without changing any
 ratings. Press `U` to undo the most recent vote, restore that exact matchup, and
 rank it again. Use `+` or `=` to enlarge the code and `-` to reduce it while
-retaining the visible line. Stop the server with `Ctrl-C`.
+retaining the visible line.
 
 Contender names are hidden by default to reduce bias. Click “Click to Reveal
 Font” in either pane when you want to see that font's identity.
