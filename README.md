@@ -10,7 +10,7 @@ your choices.
 Requires Python 3.10 or newer. No packages need to be installed.
 
 ```bash
-cd font_ranker
+cd font-ranker
 python3 server.py
 ```
 
