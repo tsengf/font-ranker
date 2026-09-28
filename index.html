@@ -19,12 +19,12 @@
       <section class="intro">
         <p class="eyebrow">THE PROGRAMMING TYPEFACE TOURNAMENT</p>
         <h1>Which code feels <em>right?</em></h1>
-        <p>Same code. Two typefaces. Trust your eyes and choose fast. <span class="shortcut-group"><span class="shortcut-hint"><kbd>P</kbd><b>Pass</b></span><span class="shortcut-hint"><kbd>U</kbd><b>Undo</b></span><span class="shortcut-hint"><kbd>−</kbd><b>Smaller</b></span><span class="shortcut-hint"><kbd>+</kbd><b>Larger</b></span></span></p>
+        <p>Same code. Two typefaces. Trust your eyes and choose fast. <span class="shortcut-group"><span class="shortcut-hint"><kbd>P</kbd><b>Pass</b></span><span class="shortcut-hint"><kbd>U</kbd><b>Undo</b></span><span class="shortcut-hint"><kbd>T</kbd><b>Names</b></span><span class="shortcut-hint"><kbd>−</kbd><b>Smaller</b></span><span class="shortcut-hint"><kbd>+</kbd><b>Larger</b></span><label class="font-size-control" for="code-font-size">Size <input id="code-font-size" type="number" min="8" max="72" step="any" inputmode="decimal" aria-label="Code font size in pixels"><span>px</span></label></span></p>
       </section>
 
       <section class="arena" aria-label="Font comparison">
-        <article class="font-card left-card" id="choice-1" role="button" tabindex="-1" aria-label="Choose font one" aria-disabled="true">
-          <span class="card-meta"><span class="font-identity"><button class="font-name" id="font-name-1" data-index="0" type="button">Click to Reveal Font</button></span><span class="shortcut-hint key-hint"><kbd>1</kbd><span>or</span><kbd>←</kbd><b>Vote this</b></span></span>
+        <article class="font-card left-card" aria-label="Font one preview">
+          <span class="card-meta"><span class="font-identity"><span class="font-name" id="font-name-1">Font name hidden</span></span><span class="shortcut-hint key-hint"><kbd>1</kbd><span>or</span><kbd>←</kbd><b>Vote this</b></span></span>
           <span class="code-window">
             <span class="window-bar"><i></i><i></i><i></i><b>snippet.c</b></span>
             <code class="code-sample" id="code-1">Loading snippet.c…</code>
@@ -33,13 +33,15 @@
 
         <div class="versus" aria-hidden="true">VS</div>
 
-        <article class="font-card right-card" id="choice-2" role="button" tabindex="-1" aria-label="Choose font two" aria-disabled="true">
-          <span class="card-meta"><span class="font-identity"><button class="font-name" id="font-name-2" data-index="1" type="button">Click to Reveal Font</button></span><span class="shortcut-hint key-hint"><kbd>2</kbd><span>or</span><kbd>→</kbd><b>Vote this</b></span></span>
+        <article class="font-card right-card" aria-label="Font two preview">
+          <span class="card-meta"><span class="font-identity"><span class="font-name" id="font-name-2">Font name hidden</span></span><span class="shortcut-hint key-hint"><kbd>2</kbd><span>or</span><kbd>→</kbd><b>Vote this</b></span></span>
           <span class="code-window">
             <span class="window-bar"><i></i><i></i><i></i><b>snippet.c</b></span>
             <code class="code-sample" id="code-2" aria-hidden="true"></code>
           </span>
         </article>
+
+        <span class="resize-handle" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="Resize code windows" aria-controls="code-1 code-2" aria-valuemin="140" aria-valuemax="1200" title="Drag or use ↑/↓ to resize"></span>
 
         <div class="loading-panel" id="loading" role="status" aria-live="polite">
           <span class="spinner"></span><strong>Preparing the next matchup</strong>

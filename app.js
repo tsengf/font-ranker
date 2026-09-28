@@ -1,7 +1,7 @@
-const choices = [document.querySelector('#choice-1'), document.querySelector('#choice-2')];
 const names = [document.querySelector('#font-name-1'), document.querySelector('#font-name-2')];
-const revealButtons = names;
 const samples = [document.querySelector('#code-1'), document.querySelector('#code-2')];
+const fontSizeInput = document.querySelector('#code-font-size');
+const resizeHandle = document.querySelector('.resize-handle');
 const loading = document.querySelector('#loading');
 const rankingsBody = document.querySelector('#rankings');
 const voteCount = document.querySelector('#vote-count');
@@ -11,6 +11,11 @@ let busy = true;
 let lastSnippet = '';
 let syncingScroll = false;
 let codeFontSize = null;
+let codeWindowHeight = null;
+let showAllNames = false;
+
+const minCodeWindowHeight = 140;
+const maxCodeWindowHeight = 1200;
 
 const cKeywords = new Set([
   'auto', 'break', 'case', 'const', 'continue', 'default', 'do', 'else', 'enum',
@@ -96,16 +101,75 @@ function synchronizeScroll(source, target) {
   requestAnimationFrame(() => { syncingScroll = false; });
 }
 
+function setCodeFontSize(size, syncInput = true) {
+  const previousSize = codeFontSize ?? parseFloat(getComputedStyle(samples[0]).fontSize);
+  const scrollPositions = samples.map(sample => sample.scrollTop / previousSize);
+  codeFontSize = Math.min(72, Math.max(8, size));
+  samples.forEach((sample, index) => {
+    sample.style.fontSize = `${codeFontSize}px`;
+    sample.scrollTop = scrollPositions[index] * codeFontSize;
+  });
+  if (syncInput) fontSizeInput.value = String(codeFontSize);
+}
+
 function resizeCode(delta) {
-  const oldLineHeight = parseFloat(getComputedStyle(samples[0]).lineHeight);
-  const visibleLine = oldLineHeight > 0 ? samples[0].scrollTop / oldLineHeight : 0;
-  if (codeFontSize === null) codeFontSize = parseFloat(getComputedStyle(samples[0]).fontSize);
-  codeFontSize = Math.min(32, Math.max(8, codeFontSize + delta));
-  samples.forEach(sample => { sample.style.fontSize = `${codeFontSize}px`; });
-  const newLineHeight = parseFloat(getComputedStyle(samples[0]).lineHeight);
-  samples.forEach(sample => { sample.scrollTop = visibleLine * newLineHeight; });
+  setCodeFontSize((codeFontSize ?? parseFloat(getComputedStyle(samples[0]).fontSize)) + delta);
   showToast(`Code size: ${codeFontSize}px`);
 }
+
+fontSizeInput.value = String(parseFloat(getComputedStyle(samples[0]).fontSize));
+fontSizeInput.addEventListener('input', () => {
+  if (fontSizeInput.validity.valid && Number.isFinite(fontSizeInput.valueAsNumber)) {
+    setCodeFontSize(fontSizeInput.valueAsNumber, false);
+  }
+});
+fontSizeInput.addEventListener('change', () => {
+  if (Number.isFinite(fontSizeInput.valueAsNumber)) {
+    setCodeFontSize(fontSizeInput.valueAsNumber);
+  } else {
+    fontSizeInput.value = String(codeFontSize ?? parseFloat(getComputedStyle(samples[0]).fontSize));
+  }
+});
+
+function setCodeWindowHeight(height) {
+  codeWindowHeight = Math.round(Math.min(maxCodeWindowHeight, Math.max(minCodeWindowHeight, height)));
+  samples.forEach(sample => {
+    sample.style.maxHeight = 'none';
+    sample.style.height = `${codeWindowHeight}px`;
+  });
+  resizeHandle.setAttribute('aria-valuenow', String(codeWindowHeight));
+}
+
+function ensureCodeWindowHeight() {
+  if (codeWindowHeight === null) {
+    setCodeWindowHeight(Math.max(...samples.map(sample => sample.getBoundingClientRect().height)));
+  }
+}
+
+let resizeDrag = null;
+resizeHandle.addEventListener('pointerdown', event => {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  ensureCodeWindowHeight();
+  resizeHandle.focus();
+  resizeDrag = { pointerId: event.pointerId, y: event.clientY, height: codeWindowHeight };
+  resizeHandle.setPointerCapture(event.pointerId);
+});
+resizeHandle.addEventListener('pointermove', event => {
+  if (resizeDrag?.pointerId === event.pointerId) setCodeWindowHeight(resizeDrag.height + event.clientY - resizeDrag.y);
+});
+resizeHandle.addEventListener('pointerup', event => {
+  if (resizeDrag?.pointerId === event.pointerId) resizeDrag = null;
+});
+resizeHandle.addEventListener('pointercancel', event => {
+  if (resizeDrag?.pointerId === event.pointerId) resizeDrag = null;
+});
+resizeHandle.addEventListener('keydown', event => {
+  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+  event.preventDefault();
+  ensureCodeWindowHeight();
+  setCodeWindowHeight(codeWindowHeight + (event.key === 'ArrowDown' ? 20 : -20));
+});
 
 samples[0].addEventListener('scroll', () => synchronizeScroll(samples[0], samples[1]), { passive: true });
 samples[1].addEventListener('scroll', () => synchronizeScroll(samples[1], samples[0]), { passive: true });
@@ -128,10 +192,6 @@ function showToast(message) {
 function setLoading(isLoading) {
   busy = isLoading;
   loading.classList.toggle('show', isLoading);
-  choices.forEach(choice => {
-    choice.setAttribute('aria-disabled', String(isLoading));
-    choice.tabIndex = isLoading ? -1 : 0;
-  });
 }
 
 function renderRanking(state) {
@@ -146,6 +206,14 @@ function renderRanking(state) {
     });
     return tr;
   }));
+}
+
+function setFontNamesVisible(visible) {
+  showAllNames = visible;
+  names.forEach((name, index) => {
+    name.textContent = visible ? currentPair[index].name : 'Font name hidden';
+    name.classList.toggle('revealed', visible);
+  });
 }
 
 async function getJSON(url, options) {
@@ -167,11 +235,10 @@ async function displayPair(pair) {
   document.head.append(style);
   await Promise.all(currentPair.map((_, index) => document.fonts.load(`16px Contender${index}`)));
   currentPair.forEach((font, index) => {
-    names[index].textContent = 'Click to Reveal Font';
-    revealButtons[index].disabled = false;
-    revealButtons[index].classList.remove('revealed');
     samples[index].style.fontFamily = `Contender${index}, monospace`;
   });
+  setFontNamesVisible(showAllNames);
+  ensureCodeWindowHeight();
   samples.forEach(sample => {
     sample.scrollTop = retainedScrollTop;
     sample.scrollLeft = 0;
@@ -184,7 +251,6 @@ async function nextPair() {
     const [, data] = await Promise.all([refreshSnippet(), getJSON('/api/pair')]);
     await displayPair(data.pair);
     setLoading(false);
-    choices[0].focus({ preventScroll: true });
   } catch (error) {
     showToast(error.message);
     loading.querySelector('strong').textContent = 'Could not prepare fonts';
@@ -240,27 +306,16 @@ async function revisitPrevious() {
   }
 }
 
-choices.forEach((button, index) => button.addEventListener('click', () => vote(index)));
-choices.forEach((choice, index) => choice.addEventListener('keydown', event => {
-  if (event.target !== choice) return;
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault();
-    vote(index);
-  }
-}));
-revealButtons.forEach((button, index) => button.addEventListener('click', event => {
-  event.stopPropagation();
-  if (busy || !currentPair) return;
-  names[index].textContent = currentPair[index].name;
-  button.disabled = true;
-  button.classList.add('revealed');
-}));
 window.addEventListener('keydown', event => {
   if (event.repeat || busy || event.target.matches('input, textarea, select')) return;
   if (event.key === '1' || event.key === 'ArrowLeft') { event.preventDefault(); vote(0); }
   if (event.key === '2' || event.key === 'ArrowRight') { event.preventDefault(); vote(1); }
   if (event.key.toLowerCase() === 'p') { event.preventDefault(); pass(); }
   if (event.key.toLowerCase() === 'u') { event.preventDefault(); revisitPrevious(); }
+  if (event.key.toLowerCase() === 't' && currentPair) {
+    event.preventDefault();
+    setFontNamesVisible(!showAllNames);
+  }
   if (event.key === '+' || event.key === '=') { event.preventDefault(); resizeCode(1); }
   if (event.key === '-') { event.preventDefault(); resizeCode(-1); }
 });

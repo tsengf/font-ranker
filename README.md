@@ -26,14 +26,16 @@ You can also start it directly with Python:
 python3 server.py
 ```
 
-Choose with `1` / `2`, the left / right arrow keys,
-or by clicking a card. Press `P` to pass on a matchup without changing any
-ratings. Press `U` to undo the most recent vote, restore that exact matchup, and
-rank it again. Use `+` or `=` to enlarge the code and `-` to reduce it while
-retaining the visible line.
+Vote with `1` / `2` or the left / right arrow keys. Press `P` to pass on a
+matchup without changing any ratings. Press `U` to undo the most recent vote,
+restore that exact matchup, and rank it again. Code starts at 12 px and keeps its
+size when the browser window changes. Enter a code font size in pixels,
+or use `+` / `=` to enlarge it and `-` to reduce it while retaining the visible
+line. Drag the grip below both code windows to resize the previews, or focus it
+and use the up/down arrow keys.
 
-Contender names are hidden by default to reduce bias. Click “Click to Reveal
-Font” in either pane when you want to see that font's identity.
+Contender names are hidden by default to reduce bias. Press `T` to show or hide
+both names across matchups.
 
 The latest Nerd Fonts release catalog is fetched at startup. Each matchup
 downloads only the missing font archives, extracts a regular monospace variant,
