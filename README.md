@@ -57,6 +57,9 @@ Both panes use C-aware syntax colors and synchronize their vertical and
 horizontal scroll positions in either direction. The vertical position is
 retained when moving to the next matchup.
 
+Click a font name in the rankings to open a preview of the current code snippet
+in that font. Fonts that are not cached yet are downloaded when opened.
+
 ## Tests
 
 ```bash

@@ -3,6 +3,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 import server
 
@@ -103,6 +104,55 @@ class FontArchiveTests(unittest.TestCase):
                 archive.writestr("FontNerdFont-Italic.ttf", b"italic")
             with zipfile.ZipFile(temp.name) as archive:
                 self.assertEqual(server.choose_font_member(archive), "FontNerdFontMono-Regular.ttf")
+
+
+class PreparedFontTests(unittest.TestCase):
+    def test_prepares_a_ranked_font_from_the_catalog(self):
+        with mock.patch.object(server, "CACHE") as cache:
+            cache.fonts = {"Sample": {"id": "Sample", "name": "Sample Mono"}}
+            cache.ensure.return_value = (Path("font.ttf"), "truetype")
+
+            self.assertEqual(server.prepare_font("Sample"), {
+                "id": "Sample",
+                "name": "Sample Mono",
+                "fontUrl": "/fonts/Sample/font.ttf",
+                "format": "truetype",
+            })
+            cache.ensure.assert_called_once_with("Sample")
+
+    def test_rejects_an_unknown_ranked_font(self):
+        with mock.patch.object(server, "CACHE") as cache:
+            cache.fonts = {}
+
+            with self.assertRaisesRegex(ValueError, "Unknown font"):
+                server.prepare_font("Missing")
+            cache.ensure.assert_not_called()
+
+
+class FontPreviewEndpointTests(unittest.TestCase):
+    def test_returns_the_requested_font(self):
+        handler = object.__new__(server.Handler)
+        handler.path = "/api/font/Sample"
+        handler.json_response = mock.Mock()
+        font = {"id": "Sample", "fontUrl": "/fonts/Sample/font.ttf"}
+
+        with mock.patch.object(server, "prepare_font", return_value=font) as prepare:
+            handler.do_GET()
+
+        prepare.assert_called_once_with("Sample")
+        handler.json_response.assert_called_once_with(font)
+
+    def test_unknown_font_returns_not_found(self):
+        handler = object.__new__(server.Handler)
+        handler.path = "/api/font/Missing"
+        handler.json_response = mock.Mock()
+
+        with mock.patch.object(server, "prepare_font", side_effect=ValueError("Unknown font")):
+            handler.do_GET()
+
+        handler.json_response.assert_called_once_with(
+            {"error": "Unknown font"}, server.HTTPStatus.NOT_FOUND
+        )
 
 
 if __name__ == "__main__":

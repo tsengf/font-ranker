@@ -4,6 +4,11 @@ const fontSizeInput = document.querySelector('#code-font-size');
 const resizeHandle = document.querySelector('.resize-handle');
 const loading = document.querySelector('#loading');
 const rankingsBody = document.querySelector('#rankings');
+const previewDialog = document.querySelector('#font-preview');
+const previewTitle = document.querySelector('#preview-title');
+const previewStatus = document.querySelector('#preview-status');
+const previewCode = document.querySelector('#preview-code');
+const previewClose = document.querySelector('#preview-close');
 const voteCount = document.querySelector('#vote-count');
 const toast = document.querySelector('#toast');
 let currentPair = null;
@@ -13,6 +18,9 @@ let syncingScroll = false;
 let codeFontSize = null;
 let codeWindowHeight = null;
 let showAllNames = false;
+let previewRequest = 0;
+let previewTrigger = null;
+const previewFontFaces = new Map();
 
 const minCodeWindowHeight = 140;
 const maxCodeWindowHeight = 1200;
@@ -199,14 +207,79 @@ function renderRanking(state) {
   rankingsBody.replaceChildren(...state.ranking.map(row => {
     const tr = document.createElement('tr');
     if (!row.comparisons) tr.className = 'unseen';
-    [String(row.rank).padStart(2, '0'), row.name, Math.round(row.rating).toLocaleString(), `${row.wins}–${row.losses}`, row.comparisons.toLocaleString()].forEach(value => {
+    [String(row.rank).padStart(2, '0'), row.name, Math.round(row.rating).toLocaleString(), `${row.wins}–${row.losses}`, row.comparisons.toLocaleString()].forEach((value, index) => {
       const td = document.createElement('td');
-      td.textContent = value;
+      if (index === 1) {
+        const button = document.createElement('button');
+        button.className = 'ranking-font';
+        button.type = 'button';
+        button.textContent = value;
+        button.addEventListener('click', () => openFontPreview(row, button));
+        td.append(button);
+      } else {
+        td.textContent = value;
+      }
       tr.append(td);
     });
     return tr;
   }));
 }
+
+async function loadPreviewFont(font) {
+  let face = previewFontFaces.get(font.id);
+  if (!face) {
+    face = new FontFace(`RankedPreview_${font.id}`, `url("${font.fontUrl}") format("${font.format}")`);
+    previewFontFaces.set(font.id, face);
+  }
+  try {
+    await face.load();
+    document.fonts.add(face);
+    return face.family;
+  } catch (error) {
+    previewFontFaces.delete(font.id);
+    throw error;
+  }
+}
+
+async function openFontPreview(row, trigger) {
+  const request = ++previewRequest;
+  previewTrigger = trigger;
+  previewTitle.textContent = row.name;
+  previewStatus.textContent = 'Preparing font preview…';
+  previewStatus.hidden = false;
+  previewCode.replaceChildren();
+  previewCode.style.fontFamily = 'monospace';
+  previewCode.style.fontSize = getComputedStyle(samples[0]).fontSize;
+  previewDialog.showModal();
+  try {
+    const [font] = await Promise.all([
+      getJSON(`/api/font/${encodeURIComponent(row.id)}`),
+      refreshSnippet(),
+    ]);
+    const family = await loadPreviewFont(font);
+    if (request !== previewRequest || !previewDialog.open) return;
+    previewCode.replaceChildren(renderSnippet(lastSnippet));
+    previewCode.style.fontFamily = `"${family}", monospace`;
+    previewStatus.hidden = true;
+  } catch (error) {
+    if (request !== previewRequest || !previewDialog.open) return;
+    previewStatus.textContent = `Could not prepare preview: ${error.message}`;
+  }
+}
+
+previewClose.addEventListener('click', () => previewDialog.close());
+previewDialog.addEventListener('click', event => {
+  if (event.target !== previewDialog) return;
+  const bounds = previewDialog.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right ||
+      event.clientY < bounds.top || event.clientY > bounds.bottom) {
+    previewDialog.close();
+  }
+});
+previewDialog.addEventListener('close', () => {
+  previewRequest += 1;
+  previewTrigger?.focus();
+});
 
 function setFontNamesVisible(visible) {
   showAllNames = visible;
@@ -218,6 +291,12 @@ function setFontNamesVisible(visible) {
 
 async function getJSON(url, options) {
   const response = await fetch(url, options);
+  if (!response.headers.get('content-type')?.includes('application/json')) {
+    if (url.startsWith('/api/font/')) {
+      throw new Error(`Font preview API returned HTTP ${response.status}. Restart the server and reload the page.`);
+    }
+    throw new Error(`Expected JSON from ${url} (HTTP ${response.status})`);
+  }
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || `Request failed (${response.status})`);
   return payload;
@@ -307,7 +386,7 @@ async function revisitPrevious() {
 }
 
 window.addEventListener('keydown', event => {
-  if (event.repeat || busy || event.target.matches('input, textarea, select')) return;
+  if (previewDialog.open || event.repeat || busy || event.target.matches('input, textarea, select')) return;
   if (event.key === '1' || event.key === 'ArrowLeft') { event.preventDefault(); vote(0); }
   if (event.key === '2' || event.key === 'ArrowRight') { event.preventDefault(); vote(1); }
   if (event.key.toLowerCase() === 'p') { event.preventDefault(); pass(); }

@@ -384,19 +384,21 @@ CACHE = FontCache(FONT_DIR, CATALOG)
 LAST_PAIR: frozenset[str] = frozenset()
 
 
+def prepare_font(identifier: str) -> dict:
+    font = CACHE.fonts.get(identifier)
+    if font is None:
+        raise ValueError("Unknown font")
+    font_path, font_format = CACHE.ensure(identifier)
+    return {
+        "id": identifier,
+        "name": font["name"],
+        "fontUrl": f"/fonts/{identifier}/{font_path.name}",
+        "format": font_format,
+    }
+
+
 def prepare_pair(identifiers: list[str]) -> list[dict]:
-    catalog_by_id = {font["id"]: font for font in CATALOG["fonts"]}
-    result = []
-    for identifier in identifiers:
-        font = catalog_by_id[identifier]
-        font_path, font_format = CACHE.ensure(identifier)
-        result.append({
-            "id": identifier,
-            "name": font["name"],
-            "fontUrl": f"/fonts/{identifier}/{font_path.name}",
-            "format": font_format,
-        })
-    return result
+    return [prepare_font(identifier) for identifier in identifiers]
 
 
 class PairPrefetcher:
@@ -489,6 +491,15 @@ class Handler(BaseHTTPRequestHandler):
                 self.json_response({"pair": pair})
             except Exception as error:
                 self.json_response({"error": str(error)}, 502)
+            return
+        match = re.fullmatch(r"/api/font/([A-Za-z0-9+_-]+)", path)
+        if match:
+            try:
+                self.json_response(prepare_font(match.group(1)))
+            except ValueError as error:
+                self.json_response({"error": str(error)}, HTTPStatus.NOT_FOUND)
+            except Exception as error:
+                self.json_response({"error": str(error)}, HTTPStatus.BAD_GATEWAY)
             return
         match = re.fullmatch(r"/fonts/([A-Za-z0-9+_-]+)/font\.(ttf|otf)", path)
         if match:
