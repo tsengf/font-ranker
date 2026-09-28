@@ -1,5 +1,5 @@
 {
-  "name": "font-ranker",
+  "name": "nerd-font-ranker",
   "version": "0.1.0",
   "private": true,
   "description": "Pairwise programming-font ranking for the Nerd Fonts catalog",

@@ -12,7 +12,7 @@ Requires Python 3.10 or newer. No packages need to be installed.
 From a terminal, change into the project directory and start the server:
 
 ```bash
-cd font-ranker
+cd nerd-font-ranker
 npm start
 ```
 
