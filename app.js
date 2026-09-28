@@ -20,6 +20,9 @@ let codeWindowHeight = null;
 let showAllNames = false;
 let previewRequest = 0;
 let previewTrigger = null;
+let previewFontId = null;
+let previewSnippet = null;
+let rankingRows = [];
 const previewFontFaces = new Map();
 
 const minCodeWindowHeight = 140;
@@ -78,19 +81,32 @@ function colorizeC(text) {
 
 function renderSnippet(source) {
   const fragment = document.createDocumentFragment();
-  source.replace(/\s+$/, '').split('\n').forEach((text, index) => {
+  const ruler = document.createElement('span');
+  ruler.className = 'pixel-ruler';
+  ruler.setAttribute('aria-hidden', 'true');
+  const codeLines = document.createElement('span');
+  codeLines.className = 'code-lines';
+  source.replace(/\s+$/, '').split('\n').forEach(text => {
     const line = document.createElement('span');
     line.className = 'line';
-    const number = document.createElement('span');
-    number.className = 'ln';
-    number.textContent = String(index + 1);
-    const content = document.createElement('span');
-    content.className = 'code-text';
-    content.append(text ? colorizeC(text) : document.createTextNode(' '));
-    line.append(number, content);
-    fragment.append(line);
+    line.append(text ? colorizeC(text) : document.createTextNode(' '));
+    codeLines.append(line);
   });
+  fragment.append(ruler, codeLines);
   return fragment;
+}
+
+function updatePixelRuler(sample) {
+  const ruler = sample.querySelector('.pixel-ruler');
+  if (!ruler) return;
+  const height = sample.querySelector('.code-lines').getBoundingClientRect().height;
+  for (let offset = ruler.childElementCount * 20; offset < height; offset += 20) {
+    const tick = document.createElement('span');
+    tick.className = 'pixel-tick';
+    tick.style.top = `${offset}px`;
+    tick.textContent = String(offset);
+    ruler.append(tick);
+  }
 }
 
 function synchronizeScroll(source, target) {
@@ -115,6 +131,7 @@ function setCodeFontSize(size, syncInput = true) {
   codeFontSize = Math.min(72, Math.max(8, size));
   samples.forEach((sample, index) => {
     sample.style.fontSize = `${codeFontSize}px`;
+    updatePixelRuler(sample);
     sample.scrollTop = scrollPositions[index] * codeFontSize;
   });
   if (syncInput) fontSizeInput.value = String(codeFontSize);
@@ -188,7 +205,10 @@ async function refreshSnippet() {
   const source = await response.text();
   if (source === lastSnippet) return;
   lastSnippet = source;
-  samples.forEach(sample => sample.replaceChildren(renderSnippet(source)));
+  samples.forEach(sample => {
+    sample.replaceChildren(renderSnippet(source));
+    updatePixelRuler(sample);
+  });
 }
 
 function showToast(message) {
@@ -204,6 +224,7 @@ function setLoading(isLoading) {
 
 function renderRanking(state) {
   voteCount.textContent = state.totalVotes.toLocaleString();
+  rankingRows = state.ranking;
   rankingsBody.replaceChildren(...state.ranking.map(row => {
     const tr = document.createElement('tr');
     if (!row.comparisons) tr.className = 'unseen';
@@ -241,16 +262,28 @@ async function loadPreviewFont(font) {
   }
 }
 
+function pinPreviewTop() {
+  const top = Math.max(16, previewDialog.getBoundingClientRect().top);
+  previewDialog.style.top = `${top}px`;
+  previewDialog.style.bottom = 'auto';
+  previewDialog.style.marginBlock = '0';
+  previewDialog.style.maxHeight = `calc(100dvh - ${top + 16}px)`;
+}
+
 async function openFontPreview(row, trigger) {
   const request = ++previewRequest;
   previewTrigger = trigger;
-  previewTitle.textContent = row.name;
-  previewStatus.textContent = 'Preparing font preview…';
-  previewStatus.hidden = false;
-  previewCode.replaceChildren();
-  previewCode.style.fontFamily = 'monospace';
-  previewCode.style.fontSize = getComputedStyle(samples[0]).fontSize;
-  previewDialog.showModal();
+  previewFontId = row.id;
+  if (!previewDialog.open) {
+    previewTitle.textContent = row.name;
+    previewStatus.textContent = 'Preparing font preview…';
+    previewStatus.hidden = false;
+    previewCode.replaceChildren();
+    previewSnippet = null;
+    previewCode.style.fontFamily = 'monospace';
+    previewCode.style.fontSize = getComputedStyle(samples[0]).fontSize;
+    previewDialog.showModal();
+  }
   try {
     const [font] = await Promise.all([
       getJSON(`/api/font/${encodeURIComponent(row.id)}`),
@@ -258,14 +291,31 @@ async function openFontPreview(row, trigger) {
     ]);
     const family = await loadPreviewFont(font);
     if (request !== previewRequest || !previewDialog.open) return;
-    previewCode.replaceChildren(renderSnippet(lastSnippet));
+    if (lastSnippet !== previewSnippet) {
+      previewCode.replaceChildren(renderSnippet(lastSnippet));
+      previewSnippet = lastSnippet;
+    }
+    previewTitle.textContent = row.name;
     previewCode.style.fontFamily = `"${family}", monospace`;
+    updatePixelRuler(previewCode);
     previewStatus.hidden = true;
+    if (!previewDialog.style.top) pinPreviewTop();
   } catch (error) {
     if (request !== previewRequest || !previewDialog.open) return;
-    previewStatus.textContent = `Could not prepare preview: ${error.message}`;
+    previewStatus.textContent = `Could not prepare ${row.name}: ${error.message}`;
+    previewStatus.hidden = false;
   }
 }
+
+previewDialog.addEventListener('keydown', event => {
+  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+  event.preventDefault();
+  const index = rankingRows.findIndex(row => row.id === previewFontId);
+  const nextIndex = index + (event.key === 'ArrowDown' ? 1 : -1);
+  if (index < 0 || nextIndex < 0 || nextIndex >= rankingRows.length) return;
+  const trigger = rankingsBody.children[nextIndex].querySelector('.ranking-font');
+  openFontPreview(rankingRows[nextIndex], trigger);
+});
 
 previewClose.addEventListener('click', () => previewDialog.close());
 previewDialog.addEventListener('click', event => {
@@ -278,6 +328,11 @@ previewDialog.addEventListener('click', event => {
 });
 previewDialog.addEventListener('close', () => {
   previewRequest += 1;
+  previewFontId = null;
+  previewDialog.style.top = '';
+  previewDialog.style.bottom = '';
+  previewDialog.style.marginBlock = '';
+  previewDialog.style.maxHeight = '';
   previewTrigger?.focus();
 });
 
@@ -315,6 +370,7 @@ async function displayPair(pair) {
   await Promise.all(currentPair.map((_, index) => document.fonts.load(`16px Contender${index}`)));
   currentPair.forEach((font, index) => {
     samples[index].style.fontFamily = `Contender${index}, monospace`;
+    updatePixelRuler(samples[index]);
   });
   setFontNamesVisible(showAllNames);
   ensureCodeWindowHeight();
