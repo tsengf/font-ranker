@@ -13,18 +13,12 @@ From a terminal, change into the project directory and start the server:
 
 ```bash
 cd nerd-font-ranker
-npm start
+./server.py
 ```
 
 Then open <http://127.0.0.1:8787> in a browser. Leave the terminal running while
 you use the app. Press `Ctrl-C` in that terminal to stop the server; run
-`npm start` again to restart it.
-
-You can also start it directly with Python:
-
-```bash
-python3 server.py
-```
+`./server.py` again to restart it.
 
 Vote with `1` / `2` or the left / right arrow keys. Press `P` to pass on a
 matchup without changing any ratings. Press `U` to undo the most recent vote,
